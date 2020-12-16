@@ -74,11 +74,11 @@ class PublicApiClient:
         """
         s = ''
         for i in sorted(d):
-            if type(d[i]) == dict:
+            if isinstance(d[i], dict):
                 for into in d[i]:
-                    if type(d[i][into]) == dict:
+                    if isinstance(d[i][into], dict):
                         for subInto in d[i][into]:
-                            if type(d[i][into][subInto]) == dict:
+                            if isinstance(d[i][into][subInto], dict):
                                 s += self.httpencode(d[i][into][subInto])
                             else:
                                 s += i + '[' + into + ']' + '[' + subInto + \
