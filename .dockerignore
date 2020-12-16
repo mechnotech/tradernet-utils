@@ -1,0 +1,9 @@
+static
+sent_emails
+media
+venv
+README.md
+Dockerfile
+.env
+db.sqlite3
+
