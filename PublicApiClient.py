@@ -72,22 +72,22 @@ class PublicApiClient:
         :param d:
         :return: string
         """
+
+        def _dict_flatter(exkey, d, exval=None):
+            sub = ''
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    return sub + _dict_flatter(exkey, value, key)
+                x = f'[{exval}]' if exval else ''
+                sub += f'{exval}{x}[{key}]={value}&'
+            return sub
+
         s = ''
-        for i in sorted(d):
-            if isinstance(d[i], dict):
-                for into in d[i]:
-                    if isinstance(d[i][into], dict):
-                        for subInto in d[i][into]:
-                            if isinstance(d[i][into][subInto], dict):
-                                s += self.httpencode(d[i][into][subInto])
-                            else:
-                                s += i + '[' + into + ']' + '[' + subInto + \
-                                     ']=' + str(
-                                                d[i][into][subInto]) + '&'
-                    else:
-                        s += i + '[' + into + ']=' + str(d[i][into]) + '&'
+        for k, v in sorted(d.items()):
+            if isinstance(v, dict):
+                return s + f'{_dict_flatter(k, v)}'
             else:
-                s += i + '=' + str(d[i]) + '&'
+                s += f'{k}={str(v)}&'
 
         return s[:-1]
 
