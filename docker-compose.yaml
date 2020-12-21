@@ -1,0 +1,18 @@
+version: '3.2'
+
+volumes:
+  tickers_volume:
+
+services:
+
+  api:
+    build: .
+    container_name: tradernet
+    restart: always
+    volumes:
+      - tickers_volume:/code/tickers_log
+    command: python loadtickers.py
+    ports:
+    - 443:443
+    env_file:
+      - .env
