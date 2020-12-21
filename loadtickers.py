@@ -95,10 +95,12 @@ def one_pass():
 
 
 if __name__ == '__main__':
-
+    utc_time = datetime.utcnow().replace(tzinfo=pytz.UTC)
+    msk_t = utc_time.astimezone(pytz.timezone("Europe/Moscow"))
     ticker_d = {ids: [None] for ids in TOP_IDS}
     chunk_d = {ids: [] for ids in TOP_IDS}
     ch_count = 0
+    logging.info(f'Запуск записи тикеров - {msk_t}')
 
     while True:
         if not is_do():
