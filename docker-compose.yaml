@@ -6,7 +6,7 @@ volumes:
 services:
 
   api:
-    build: .
+    image: mechnotech/tradernet_api:latest
     container_name: tradernet
     restart: always
     volumes:

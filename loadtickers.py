@@ -109,7 +109,7 @@ if __name__ == '__main__':
             continue
         if len(chunk_d[TOP_IDS[0]]) > 60:
             save_files(chunk_d)
-            logging.debug(f'{ch_count} блоков записано')
+            logging.info(f'{ch_count} блоков записано')
             ch_count += 1
 
         new_ticker = one_pass()
