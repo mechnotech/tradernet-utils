@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     while True:
         if not is_do():
-            logging.debug('Не рабочее время!')
+            logging.info('Не рабочее время!')
             time.sleep(WAIT_TIME)
             continue
         if len(chunk_d[TOP_IDS[0]]) > 60:
