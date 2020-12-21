@@ -23,7 +23,7 @@ def get_ticker(ticker, sup=False):
         'sup': sup
     }
     res = NtApi.PublicApiClient(pub_, sec_, NtApi.PublicApiClient().V1)
-    return res.sendRequest(cmd_, param_).content.decode("utf-8")
+    return json.loads(res.sendRequest(cmd_, param_).content)
 
 
 def get_top():
