@@ -7,4 +7,6 @@ Dockerfile
 .env
 db.sqlite3
 tickers_log
+results
+archives
 __pycache__

@@ -5,19 +5,21 @@ from json.decoder import JSONDecodeError
 
 import pytz
 
+from calc import day_result
+from settings import (
+    TRADE_START_HOUR,
+    TRADE_STOP_HOUR,
+    TRADING_DAYS,
+    V_INFO,
+    TOP_IDS,
+    SLEEP_TIME,
+    WAIT_TIME,
+    CALC_START,
+    CALC_STOP,
+    CALC_HOLD_TIME,
+    CHUNK_SIZE
+)
 from utils import get_ticker
-
-TOP_IDS = ["SBER", "GAZP", "AFKS", "AFLT", "VTBR", "MAIL", "ALRS", "LKOH",
-           "TATN", "MAGN"]
-
-V_INFO = ['c', 'bap', 'bas', 'baf', 'bbp', 'bbs', 'bbf', 'min_step',
-          'step_price']
-
-SLEEP_TIME = 0.1
-WAIT_TIME = 300
-TRADE_START_HOUR = 10
-TRADE_STOP_HOUR = 19
-TRADING_DAYS = range(1, 5)
 
 logging.basicConfig(
     filename='tickers_log/status.log',
@@ -28,26 +30,28 @@ logging.basicConfig(
 )
 
 
+def time_now():
+    utc_time = datetime.utcnow().replace(tzinfo=pytz.UTC)
+    msk_t = utc_time.astimezone(pytz.timezone("Europe/Moscow"))
+    return msk_t
+
+
 def is_do():
     working_hours = range(TRADE_START_HOUR, TRADE_STOP_HOUR)
     working_days = TRADING_DAYS
-    utc_time = datetime.utcnow().replace(tzinfo=pytz.UTC)
-    msk_t = utc_time.astimezone(pytz.timezone("Europe/Moscow"))
+    msk_t = time_now()
     if msk_t.isoweekday() in working_days and msk_t.hour in working_hours:
         return True
     return False
 
 
-# c     название тикера
-# bap   лучшее предложение
-# bas	Количество (сайз) лучшего предложения
-# baf	Объем лучшего предложения
-# bbp	Лучший бид
-# bbs	Количество (сайз) лучшего бида
-# bbf	Объем лучшего бида
-# ----
-# min_step	Минимальный шаг цены
-# step_price	Шаг цены
+def is_do_calc():
+    working_hours = range(CALC_START, CALC_STOP)
+    working_days = TRADING_DAYS
+    msk_t = time_now()
+    if msk_t.isoweekday() in working_days and msk_t.hour in working_hours:
+        return True
+    return False
 
 
 def extract(d):
@@ -95,19 +99,24 @@ def one_pass():
 
 
 if __name__ == '__main__':
-    utc_time = datetime.utcnow().replace(tzinfo=pytz.UTC)
-    msk_t = utc_time.astimezone(pytz.timezone("Europe/Moscow"))
     ticker_d = {ids: [None] for ids in TOP_IDS}
     chunk_d = {ids: [] for ids in TOP_IDS}
     ch_count = 0
-    logging.info(f'Запуск записи тикеров - {msk_t}')
+    logging.info(f'Запуск записи тикеров - {time_now()}')
 
     while True:
         if not is_do():
-            logging.debug('Не рабочее время!')
+            logging.info('Не рабочее время!')
             time.sleep(WAIT_TIME)
             continue
-        if len(chunk_d[TOP_IDS[0]]) > 60:
+
+        if is_do_calc():
+            logging.info('День завершен, приступаем к расчетам')
+            day_result()
+            logging.info('Расчеты окончены - см results, файлы перенесены')
+            time.sleep(CALC_HOLD_TIME)
+
+        if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
             save_files(chunk_d)
             logging.info(f'{ch_count} блоков записано')
             ch_count += 1

@@ -2,6 +2,8 @@ version: '3.2'
 
 volumes:
   tickers_volume:
+  results_volume:
+  archives_volume:
 
 services:
 
@@ -11,6 +13,8 @@ services:
     restart: always
     volumes:
       - tickers_volume:/code/tickers_log
+      - results_volume:/code/results
+      - archives_volume:/code/archives
     command: python loadtickers.py
     ports:
     - 443:443

@@ -1,7 +1,7 @@
-from datetime import datetime
 import json
 import os
 import urllib.parse
+from datetime import datetime
 
 import requests
 from dotenv import load_dotenv
