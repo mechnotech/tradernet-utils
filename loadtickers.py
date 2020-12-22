@@ -105,16 +105,16 @@ if __name__ == '__main__':
     logging.info(f'Запуск записи тикеров - {time_now()}')
 
     while True:
-        if not is_do():
-            logging.info('Не рабочее время!')
-            time.sleep(WAIT_TIME)
-            continue
-
         if is_do_calc():
             logging.info('День завершен, приступаем к расчетам')
             day_result()
             logging.info('Расчеты окончены - см results, файлы перенесены')
             time.sleep(CALC_HOLD_TIME)
+
+        if not is_do():
+            logging.info('Не рабочее время!')
+            time.sleep(WAIT_TIME)
+            continue
 
         if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
             save_files(chunk_d)
