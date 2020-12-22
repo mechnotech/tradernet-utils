@@ -1,4 +1,6 @@
 .env
 venv
 tickers_log
+results
+archives
 __pycache__
