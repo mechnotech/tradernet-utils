@@ -23,10 +23,10 @@ TRADE_STOP_HOUR = 19
 TRADING_DAYS = range(1, 5)
 
 # Часы для старта орбаботки данных, архивации и удаления сырых файлов за день
-CALC_START = 17
-CALC_STOP = 18
+CALC_START = 20
+CALC_STOP = 21
 # Пауза после обработки данных (1 час)
-CALC_HOLD_TIME = 300 * 12
+CALC_HOLD_TIME = 300 * 2
 
 # Тариф брокера - комиссия с одной сделки
 TARIF = 0.02
