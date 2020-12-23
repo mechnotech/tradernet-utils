@@ -68,14 +68,17 @@ def calc_profit(ticker, my_perc):
         ln = ln.split(',')
         byd = float(ln[1])  # Большее - за сколько продают
         ask = float(ln[4])  # Меньшее - за сколько покупают
-        prj_byd = percent_price(float(byd), is_ask=False, my_perc=my_perc)
-        prj_ask = percent_price(float(ask), is_ask=True, my_perc=my_perc)
+
+        if ask > byd:
+            continue
 
         if order_bye:
             if byd <= order_bye:
                 # print('---- BUY ----')
                 paper += block
                 cash -= order_bye * block
+                prj_byd = percent_price(float(byd), is_ask=False,
+                                        my_perc=my_perc)
                 order_sell = prj_byd
                 order_bye = 0
                 count_b += 1
@@ -85,6 +88,8 @@ def calc_profit(ticker, my_perc):
                 # print('---- SELL ----')
                 paper -= block
                 cash += order_sell * block
+                prj_ask = percent_price(float(ask), is_ask=True,
+                                        my_perc=my_perc)
                 order_bye = prj_ask
                 order_sell = 0
                 count_s += 1
@@ -93,6 +98,8 @@ def calc_profit(ticker, my_perc):
         if not order_bye:
             if not order_sell:
                 # print('---- START ----')
+                prj_ask = percent_price(float(ask), is_ask=True,
+                                        my_perc=my_perc)
                 order_bye = prj_ask
 
         # min_step = ln[-3]

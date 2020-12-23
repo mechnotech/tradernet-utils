@@ -119,6 +119,7 @@ if __name__ == '__main__':
         if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
             save_files(chunk_d)
             logging.info(f'{ch_count} блоков записано')
+            chunk_d.clear()
             ch_count += 1
 
         new_ticker = one_pass()
