@@ -23,7 +23,7 @@ from utils import get_ticker
 
 logging.basicConfig(
     filename='tickers_log/status.log',
-    filemode='w',
+    filemode='a',
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%d-%b-%y %H:%M:%S',
     level=logging.INFO

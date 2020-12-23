@@ -12,8 +12,15 @@ def time_now():
     return msk_t
 
 
+def is_file_exist(filename):
+    if os.path.isfile(f'archives/{filename}.zip'):
+        return filename + '-copy'
+    return filename
+
+
 def clean_up(name, dir_name):
-    output_filename = f'{name}-{str(time_now().date())}'
+    output_filename = is_file_exist(f'{name}-{str(time_now().date())}')
+
     shutil.make_archive(output_filename, 'zip', dir_name)
     shutil.move(f'./{output_filename}.zip',
                 f'archives/{output_filename}.zip')

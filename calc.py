@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 import time
 from datetime import datetime
@@ -8,6 +9,14 @@ import pytz
 from archivate import clean_up
 
 from settings import TOP_IDS, RISK_PCN
+
+logging.basicConfig(
+    filename='tickers_log/status.log',
+    filemode='a',
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S',
+    level=logging.INFO
+)
 
 
 def time_now():
@@ -66,8 +75,12 @@ def calc_profit(ticker, my_perc):
     for line in lines:
         ln = line.strip('\n')
         ln = ln.split(',')
-        byd = float(ln[1])  # Большее - за сколько продают
-        ask = float(ln[4])  # Меньшее - за сколько покупают
+        try:
+            byd = float(ln[1])  # Большее - за сколько продают
+            ask = float(ln[4])  # Меньшее - за сколько покупают
+        except IndexError:
+            logging.error(f'Ошибка в строке N:{count} файл {ticker}')
+            continue
 
         if ask > byd:
             continue
@@ -102,6 +115,8 @@ def calc_profit(ticker, my_perc):
                                         my_perc=my_perc)
                 order_bye = prj_ask
 
+        count += 1
+
         # min_step = ln[-3]
         # pair = percent_change((byd, ask))
         # proj_pair = percent_change((prj_byd, prj_ask))
@@ -111,12 +126,14 @@ def calc_profit(ticker, my_perc):
         #        f'cash{round(cash,2):10}'
         # print(disp)
 
-    count += 1
-
     # Если остались бумаги на конец
     paper_price = 0
     if paper:
-        paper_price = round(get_price_of_papers(lines[-1], paper), 2)
+        try:
+            paper_price = round(get_price_of_papers(lines[-1], paper), 2)
+        except IndexError:
+            logging.error(f'Ошибка в строке N:{count} файл {ticker}')
+            paper_price = -1
 
     income = round(cash - mem_cash, 2)
 
@@ -130,7 +147,7 @@ def calc_profit(ticker, my_perc):
 
 def search_best_pcn(ticker):
     my_perc = 0.1
-    max_perc = 1
+    max_perc = 2
     perc_step = 0.01
     result = []
     # Переменные для отслеживания периода без изменений
@@ -140,6 +157,8 @@ def search_best_pcn(ticker):
 
     while my_perc <= max_perc:
         res = calc_profit(ticker, round(my_perc, 3))
+        if not res:
+            break
 
         # Если нет изменний - коэфф неактуальный, надо прервать цикл раньше
         if old_cash != res[0]:
@@ -165,11 +184,19 @@ def search_best_pcn(ticker):
 def day_result():
     day_res = {}
     for ids in TOP_IDS:
+        try:
+            with open(f'tickers_log/{ids}.txt', 'r'):
+                pass
+        except FileNotFoundError:
+            logging.error(f'Файла {ids}.txt не существует!')
+            continue
+
         best, worst, raw_data = search_best_pcn(ids)
         day_res[ids] = (best, worst, raw_data)
         load = day_res.get(ids)
         with open(f'results/{ids}.log', 'a+') as f:
             f.write(str(time_now().date()) + '|' + json.dumps(load) + '\n')
+
     clean_up('tickers', 'tickers_log')
     return day_res
 
