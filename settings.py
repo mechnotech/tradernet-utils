@@ -19,7 +19,7 @@ SLEEP_TIME = 0.1
 WAIT_TIME = 300
 # Рабочие часы и дни на бирже (с 10 - 18) с Пн по Пт (1 - 5)
 TRADE_START_HOUR = 10
-TRADE_STOP_HOUR = 19
+TRADE_STOP_HOUR = 18
 TRADING_DAYS = range(1, 5)
 
 # Часы для старта орбаботки данных, архивации и удаления сырых файлов за день
