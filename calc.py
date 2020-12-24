@@ -1,14 +1,20 @@
 import json
 import logging
-import sys
 import time
 from datetime import datetime
-
+import multiprocessing as mp
 import pytz
 
 from archivate import clean_up
 
-from settings import TOP_IDS, RISK_PCN
+from settings import (TOP_IDS,
+                      RISK_PCN,
+                      CPU_UNITS,
+                      STAKE_PER_PAPER,
+                      MY_PCN_START,
+                      MY_PCN_MAX,
+                      MY_PCN_STEP
+                      )
 
 logging.basicConfig(
     filename='tickers_log/status.log',
@@ -37,18 +43,18 @@ def percent_price(price: float, is_ask: bool, my_perc):
     return round(price + percent, 2)
 
 
-def get_block_paper(line, cash):
+def get_block_paper(line, stake):
     """
     'SBER,261.45,56,624938,261.41,134,648207,0.01,0.01,1608558207'
 
+    :param stake: из какого объема считать
     :param line: Входная строка файла с котировками
-    :param cash: из какого объема считать
     :return:
     """
     ln = line.strip('\n')
     ln = ln.split(',')
     paper_price = float(ln[1])
-    risk_sum = cash / 100 * RISK_PCN
+    risk_sum = stake / 100 * RISK_PCN
     return int(risk_sum // paper_price)
 
 
@@ -66,9 +72,9 @@ def calc_profit(ticker, my_perc):
     count = 0
     order_bye = 0
     order_sell = 0
-    cash = 100000
-    mem_cash = cash
-    block = get_block_paper(line=lines[0], cash=cash)
+    stake = STAKE_PER_PAPER
+    mem_stake = stake
+    block = get_block_paper(line=lines[0], stake=stake)
     paper = 0
     count_b = 0
     count_s = 0
@@ -89,7 +95,7 @@ def calc_profit(ticker, my_perc):
             if byd <= order_bye:
                 # print('---- BUY ----')
                 paper += block
-                cash -= order_bye * block
+                stake -= order_bye * block
                 prj_byd = percent_price(float(byd), is_ask=False,
                                         my_perc=my_perc)
                 order_sell = prj_byd
@@ -100,7 +106,7 @@ def calc_profit(ticker, my_perc):
             if ask >= order_sell:
                 # print('---- SELL ----')
                 paper -= block
-                cash += order_sell * block
+                stake += order_sell * block
                 prj_ask = percent_price(float(ask), is_ask=True,
                                         my_perc=my_perc)
                 order_bye = prj_ask
@@ -135,7 +141,7 @@ def calc_profit(ticker, my_perc):
             logging.error(f'Ошибка в строке N:{count} файл {ticker}')
             paper_price = -1
 
-    income = round(cash - mem_cash, 2)
+    income = round(stake - mem_stake, 2)
 
     # print(f' Акций {paper:3}'
     #       f'   наличных {cash:.2f} (+{paper_price} - стоимость акций)'
@@ -145,21 +151,23 @@ def calc_profit(ticker, my_perc):
     return income, my_perc, paper, paper_price
 
 
-def search_best_pcn(ticker):
-    my_perc = 0.1
-    max_perc = 2
-    perc_step = 0.01
+def search_best_pcn(procnum, send_end, ticker):
+    my_perc = MY_PCN_START
+    max_perc = MY_PCN_MAX
+    perc_step = MY_PCN_STEP
     result = []
     # Переменные для отслеживания периода без изменений
     no_change_limit = 15
     no_change_counter = 0
     old_cash = 0
 
-    while my_perc <= max_perc:
+    print(f' CPU-{procnum} Поиск коэффициента для {ticker}: {my_perc:.2f}'
+          f' до {max_perc}')
+
+    while True:
         res = calc_profit(ticker, round(my_perc, 3))
         if not res:
             break
-
         # Если нет изменний - коэфф неактуальный, надо прервать цикл раньше
         if old_cash != res[0]:
             old_cash = res[0]
@@ -169,20 +177,16 @@ def search_best_pcn(ticker):
             break
 
         result.append(res)
-        sys.stdout.write(
-            f'\rПоиск коэффициента для {ticker}: {my_perc:.2f} до {max_perc}')
-        sys.stdout.flush()
         my_perc += perc_step
-    print('\n')
+
     best_r = sorted(result)[-1]
     worst_r = sorted(result)[0]
-    print(f'Лучший процент для {ticker}: {best_r[1]} -> {best_r[0]} руб')
-    print(f'Худший процент для {ticker}: {worst_r[1]} -> {worst_r[0]} руб')
-    return best_r[1], worst_r[1], result
+    # print(f'\nЛучший процент для {ticker}: {best_r[1]} -> {best_r[0]} руб')
+    # print(f'Худший процент для {ticker}: {worst_r[1]} -> {worst_r[0]} руб')
+    send_end.send((ticker, best_r[1], worst_r[1], result))
 
 
-def day_result():
-    day_res = {}
+def ret_next_ids():
     for ids in TOP_IDS:
         try:
             with open(f'tickers_log/{ids}.txt', 'r'):
@@ -190,13 +194,43 @@ def day_result():
         except FileNotFoundError:
             logging.error(f'Файла {ids}.txt не существует!')
             continue
+        yield ids
 
-        best, worst, raw_data = search_best_pcn(ids)
-        day_res[ids] = (best, worst, raw_data)
-        load = day_res.get(ids)
-        with open(f'results/{ids}.log', 'a+') as f:
-            f.write(str(time_now().date()) + '|' + json.dumps(load) + '\n')
 
+def day_result():
+    day_res = {}
+    jobs = []
+
+    end = False
+    data = ret_next_ids()
+    while not end:
+        pipe_list = []
+        for i in range(CPU_UNITS):
+            try:
+                ids = next(data)
+                recv_end, send_end = mp.Pipe(False)
+                p = mp.Process(target=search_best_pcn, args=(i, send_end, ids))
+                jobs.append(p)
+                pipe_list.append(recv_end)
+                p.start()
+            except StopIteration:
+                end = True
+                break
+
+        for proc in jobs:
+            proc.join()
+        result_list = [x.recv() for x in pipe_list]
+        day_res.update({result_list[x][0]: result_list[x][1:] for x in
+                        range(len(result_list))})
+
+    # Сохранить результаты в results/
+    if day_res:
+        for k, v in day_res.items():
+            load = day_res.get(k)
+            with open(f'results/{k}.log', 'a+') as f:
+                f.write(str(time_now().date()) + '|' + json.dumps(load) + '\n')
+
+    # Архивировать файлы котировок за день в archives/
     clean_up('tickers', 'tickers_log')
     return day_res
 
@@ -206,4 +240,4 @@ if __name__ == '__main__':
     print(day_result())
 
     # calc_profit('SBER', round(0.41, 3))
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print("--- %s seconds ---" % round((time.time() - start_time), 5))
