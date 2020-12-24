@@ -98,9 +98,13 @@ def one_pass():
     return new
 
 
+def clear_chunk_d():
+    return {ids: [] for ids in TOP_IDS}
+
+
 if __name__ == '__main__':
     ticker_d = {ids: [None] for ids in TOP_IDS}
-    chunk_d = {ids: [] for ids in TOP_IDS}
+    chunk_d = clear_chunk_d()
     ch_count = 0
     logging.info(f'Запуск записи тикеров - {time_now()}')
 
@@ -116,15 +120,9 @@ if __name__ == '__main__':
             time.sleep(WAIT_TIME)
             continue
 
-        if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
-            save_files(chunk_d)
-            logging.info(f'{ch_count} блоков записано')
-            chunk_d.clear()
-            ch_count += 1
-
+        # Если предыдущее значение отличается от текущего - добавляем в чанк
         new_ticker = one_pass()
 
-        # Если предыдущее значение отличается от текущего - добавляем в чанк
         for k, v in chunk_d.items():
             try:
                 ex = v[-1][0]
@@ -132,3 +130,9 @@ if __name__ == '__main__':
                 ex = False
             if ex != new_ticker.get(k)[0]:
                 v.append(new_ticker.get(k))
+
+        if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
+            save_files(chunk_d)
+            logging.info(f'{ch_count} блоков записано')
+            chunk_d = clear_chunk_d()
+            ch_count += 1
