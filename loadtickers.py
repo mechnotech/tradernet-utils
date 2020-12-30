@@ -7,19 +7,14 @@ import pytz
 
 from calc import day_result
 from settings import (
-    TRADE_START_HOUR,
-    TRADE_STOP_HOUR,
-    TRADING_DAYS,
     V_INFO,
     TOP_IDS,
     SLEEP_TIME,
     WAIT_TIME,
-    CALC_START,
-    CALC_STOP,
     CALC_HOLD_TIME,
     CHUNK_SIZE
 )
-from utils import get_ticker
+from utils import get_ticker, is_do
 
 logging.basicConfig(
     filename='tickers_log/status.log',
@@ -36,20 +31,10 @@ def time_now():
     return msk_t
 
 
-def is_do():
-    working_hours = range(TRADE_START_HOUR, TRADE_STOP_HOUR)
-    working_days = TRADING_DAYS
-    msk_t = time_now()
-    if msk_t.isoweekday() in working_days and msk_t.hour in working_hours:
-        return True
-    return False
-
-
-def is_do_calc():
-    working_hours = range(CALC_START, CALC_STOP)
-    working_days = TRADING_DAYS
-    msk_t = time_now()
-    if msk_t.isoweekday() in working_days and msk_t.hour in working_hours:
+def is_do_calc(flag):
+    if not flag:
+        return False
+    if not is_do():
         return True
     return False
 
@@ -107,9 +92,10 @@ if __name__ == '__main__':
     chunk_d = clear_chunk_d()
     ch_count = 0
     logging.info(f'Запуск записи тикеров - {time_now()}')
+    calc_flag = True
 
     while True:
-        if is_do_calc():
+        if is_do_calc(calc_flag):
             logging.info('День завершен, приступаем к расчетам')
             save_files(chunk_d)
             logging.info(f'{ch_count} остатки записаны')
@@ -118,12 +104,14 @@ if __name__ == '__main__':
             logging.info('Расчеты окончены - см results, файлы перенесены')
             time.sleep(CALC_HOLD_TIME)
             ch_count = 0
+            calc_flag = False
 
         if not is_do():
             logging.info('Не рабочее время!')
             time.sleep(WAIT_TIME)
             continue
 
+        calc_flag = True
         # Если предыдущее значение отличается от текущего - добавляем в чанк
         new_ticker = one_pass()
 

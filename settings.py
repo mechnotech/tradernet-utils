@@ -15,6 +15,8 @@ TOP_IDS = ['GAZP', 'SBER', 'AFKS', 'AFLT', 'MAIL', 'ALRS', 'LKOH',
 V_INFO = ['c', 'bap', 'bas', 'baf', 'bbp', 'bbs', 'bbf', 'min_step',
           'step_price']
 
+MY_STOCKS = 'ММВБ_АКЦ_Ф'
+
 # Использовать все ядра, достуные для машины
 CPU_UNITS = mp.cpu_count()
 
@@ -25,9 +27,10 @@ WAIT_TIME = 300
 
 
 # Рабочие часы и дни на бирже (с 10 - 18) с Пн по Пт (1 - 5)
-TRADE_START_HOUR = 10
-TRADE_STOP_HOUR = 18
-TRADING_DAYS = [1, 2, 3, 4, 5]
+# TRADE_START_HOUR = 10
+# TRADE_STOP_HOUR = 18
+#
+
 # Тариф брокера - комиссия с одной сделки
 TARIF = 0.02
 # Каким процентом от депо по бумаге можно рискнуть
@@ -41,8 +44,9 @@ MY_PCN_STEP = 0.01
 
 
 # Часы для старта орбаботки данных, архивации и удаления сырых файлов за день
-CALC_START = 19
-CALC_STOP = 20
+CALC_START = 7
+
+TRADING_DAYS = [1, 2, 3, 4, 5]
 # Пауза после обработки данных (1 час)
 CALC_HOLD_TIME = 300 * 12
 

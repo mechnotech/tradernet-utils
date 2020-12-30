@@ -7,6 +7,7 @@ import requests
 from dotenv import load_dotenv
 
 import PublicApiClient as NtApi
+from settings import MY_STOCKS
 
 load_dotenv()
 URL = 'https://tradernet.ru/securities/export/'
@@ -58,6 +59,24 @@ def get_tickers(tickers: list, params: list = None) -> dict:
     payload_str = urllib.parse.urlencode(payload, safe='+')
     res = requests.get(URL, params=payload_str)
     return json.loads(res.content)
+
+
+def is_do():
+    """ Открыт ли рынок """
+    cmd_ = 'getMarketStatus'
+    param_ = {
+        'market': MY_STOCKS,
+        # 'mode': "demo",
+    }
+    req = NtApi.PublicApiClient(pub_, sec_, NtApi.PublicApiClient().V1)
+    response = json.loads(req.sendRequest(cmd_, param_).content)
+    try:
+        result = response.get('result')
+        op = result['markets']['m'][0].get('s')
+        if result:
+            return False if op == 'CLOSE' else True
+    except KeyError:
+        return False
 
 
 def get_history(
@@ -113,3 +132,4 @@ if __name__ == '__main__':
             t = datetime.fromtimestamp(timest[i])
             print(f'{str(v):40}  {str(t):50}')
         print(len(value))
+    print(type(is_do()), is_do())
