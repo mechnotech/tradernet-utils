@@ -97,9 +97,6 @@ if __name__ == '__main__':
     while True:
         if is_do_calc(calc_flag):
             logging.info('День завершен, приступаем к расчетам')
-            save_files(chunk_d)
-            logging.info(f'{ch_count} остатки записаны')
-            chunk_d = clear_chunk_d()
             day_result()
             logging.info('Расчеты окончены - см results, файлы перенесены')
             time.sleep(CALC_HOLD_TIME)
