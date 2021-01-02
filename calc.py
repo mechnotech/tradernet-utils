@@ -194,6 +194,10 @@ def ret_next_ids():
         except FileNotFoundError:
             logging.error(f'Файла {ids}.txt не существует!')
             continue
+        with open(f'tickers_log/{ids}.txt', 'r') as f:
+            data = f.readlines()
+            if not data:
+                continue
         yield ids
 
 

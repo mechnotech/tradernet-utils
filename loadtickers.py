@@ -11,10 +11,10 @@ from settings import (
     TOP_IDS,
     SLEEP_TIME,
     WAIT_TIME,
-    CALC_HOLD_TIME,
-    CHUNK_SIZE
+    CHUNK_SIZE,
 )
 from utils import get_ticker, is_do
+
 
 logging.basicConfig(
     filename='tickers_log/status.log',
@@ -23,6 +23,58 @@ logging.basicConfig(
     datefmt='%d-%b-%y %H:%M:%S',
     level=logging.INFO
 )
+
+
+class Chunk:
+
+    @property
+    def is_empty(self):
+        for i in self.tickers:
+            if i:
+                return False
+        return True
+
+    @property
+    def len(self):
+        for i in self.tickers.values():
+            return len(i)
+
+    def __init__(self):
+        self.tickers = None
+        self.clear()
+        self.blocks = 0
+
+    def add(self, val):
+        for k, v in val.items():
+            try:
+                ex = self.tickers.get(k)[-1][0]
+            except IndexError:
+                ex = False
+            # Если предыдущее значение отличается от текущего
+            # - добавляем в чанк
+            if ex != v[0]:
+                self.tickers[k].append(v)
+
+    def clear(self):
+        self.tickers = {ids: [] for ids in TOP_IDS}
+        return
+
+    def save(self):
+        if not self.is_empty:
+            file_data = {
+                idf: open(
+                    f'tickers_log/{idf}.txt', 'a+', encoding='utf8'
+                ) for idf in TOP_IDS
+            }
+            for name, f in file_data.items():
+                block = ''
+                for record in self.tickers.get(name):
+                    block += ','.join(record) + '\n'
+
+                f.write(block)
+                f.close()
+            self.blocks += 1
+            self.clear()
 
 
 def time_now():
@@ -50,22 +102,6 @@ def extract(d):
     return [result, ts]
 
 
-def save_files(chunck):
-    filedata = {
-        idf: open(
-            f'tickers_log/{idf}.txt', 'a+', encoding='utf8'
-        ) for idf in TOP_IDS
-    }
-    for name, f in filedata.items():
-        block = ''
-        for record in chunck.get(name):
-            block += ','.join(record) + '\n'
-
-        f.write(block)
-        f.close()
-    return
-
-
 def one_pass():
     new = {}
     for ids in TOP_IDS:
@@ -83,14 +119,8 @@ def one_pass():
     return new
 
 
-def clear_chunk_d():
-    return {ids: [] for ids in TOP_IDS}
-
-
 if __name__ == '__main__':
-    ticker_d = {ids: [None] for ids in TOP_IDS}
-    chunk_d = clear_chunk_d()
-    ch_count = 0
+    chunk_d = Chunk()
     logging.info(f'Запуск записи тикеров - {time_now()}')
     calc_flag = True
 
@@ -99,8 +129,6 @@ if __name__ == '__main__':
             logging.info('День завершен, приступаем к расчетам')
             day_result()
             logging.info('Расчеты окончены - см results, файлы перенесены')
-            time.sleep(CALC_HOLD_TIME)
-            ch_count = 0
             calc_flag = False
 
         if not is_do():
@@ -109,19 +137,10 @@ if __name__ == '__main__':
             continue
 
         calc_flag = True
-        # Если предыдущее значение отличается от текущего - добавляем в чанк
-        new_ticker = one_pass()
 
-        for k, v in chunk_d.items():
-            try:
-                ex = v[-1][0]
-            except IndexError:
-                ex = False
-            if ex != new_ticker.get(k)[0]:
-                v.append(new_ticker.get(k))
+        new_tickers = one_pass()
+        chunk_d.add(new_tickers)
 
-        if len(chunk_d[TOP_IDS[0]]) > CHUNK_SIZE:
-            save_files(chunk_d)
-            logging.info(f'{ch_count} блоков записано')
-            chunk_d = clear_chunk_d()
-            ch_count += 1
+        if chunk_d.len > CHUNK_SIZE:
+            chunk_d.save()
+            logging.info(f'{chunk_d.blocks} тикеров записано')
